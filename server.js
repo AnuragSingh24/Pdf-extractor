@@ -1,10 +1,6 @@
-
 import express from "express";
-// import cors from "cors";
 import axios from "axios";
-import * as cheerio from "cheerio"; // Fixed import
-
-
+import * as cheerio from "cheerio";
 import cors from "cors";
 import { getDocument } from "pdfjs-dist";
 
@@ -12,8 +8,7 @@ const app = express();
 app.use(cors());
 app.use(express.json()); // Middleware to parse JSON requests
 
-// POST endpoint to receive the PDF URL
-// /////////////////////////////////PDF////////////////////////////////////////
+// POST endpoint to extract text from PDF
 app.post("/extract-text", async (req, res) => {
     try {
         const pdfUrl = req.body.url;
@@ -31,7 +26,7 @@ app.post("/extract-text", async (req, res) => {
             extractedText += textContent.items.map(item => item.str).join(" ") + "\n";
         }
 
-        // Store the extracted text in a temporary variable (optional)
+        // Store the extracted text in a temporary variable
         global.extractedText = extractedText;
 
         res.json({ message: "Text extraction successful", extractedText });
@@ -49,55 +44,7 @@ app.get("/get-text", (req, res) => {
     res.json({ extractedText: global.extractedText });
 });
 
-
-
-
-
-
-
-// POST endpoint to receive the URL and perform web scraping
-// /////////////////////////////////WEB////////////////////////////////////////
-
-// app.post("/scrape-text", async (req, res) => {
-//     try {
-//         const { url } = req.body;
-//         if (!url) {
-//             return res.status(400).json({ error: "URL is required" });
-//         }
-
-//         // Fetch the HTML content of the provided URL
-//         const response = await axios.get(url);
-//         const html = response.data;
-
-//         // Load the HTML content into cheerio
-//         const $ = cheerio.load(html);
-
-//         // Extract only visible text, excluding scripts, styles, and other non-text elements
-//         $("script, style, noscript").remove(); // Remove scripts, styles, and noscript elements
-//         let extractedText = "";
-        
-//         // Optionally, you can refine this to include only specific elements
-//         $("p, h1, h2, h3, h4, h5, h6, a, li").each(function() {
-//             extractedText += $(this).text().trim() + " "; // Append the text from relevant elements
-//         });
-
-//         // Clean up extra spaces and newlines
-//         extractedText = extractedText.replace(/\s+/g, " ").trim();
-
-//         // Store the extracted text in a temporary variable (optional)
-//         global.extractedText = extractedText;
-
-//         res.json({ message: "Text scraping successful", extractedText });
-//     } catch (error) {
-//         console.error("Error scraping text:", error);
-//         res.status(500).json({ error: "Failed to scrape text from the URL" });
-//     }
-// });
-
-
-
-
-
+// POST endpoint to scrape text from a URL
 app.post("/scrape-text", async (req, res) => {
     try {
         const { url } = req.body;
@@ -105,8 +52,16 @@ app.post("/scrape-text", async (req, res) => {
             return res.status(400).json({ error: "URL is required" });
         }
 
-        // Fetch the HTML content of the provided URL
-        const response = await axios.get(url);
+        // Custom headers to bypass restrictions (like User-Agent)
+        const headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+        };
+
+        // Fetch the HTML content of the provided URL with custom headers
+        const response = await axios.get(url, { headers });
         const html = response.data;
 
         // Load the HTML content into cheerio
@@ -115,7 +70,7 @@ app.post("/scrape-text", async (req, res) => {
         // Extract only visible text, excluding scripts, styles, and other non-text elements
         $("script, style, noscript").remove(); // Remove scripts, styles, and noscript elements
         let extractedText = "";
-        
+
         // Optionally, you can refine this to include only specific elements
         $("p, h1, h2, h3, h4, h5, h6, a, li").each(function() {
             extractedText += $(this).text().trim() + " "; // Append the text from relevant elements
@@ -130,7 +85,7 @@ app.post("/scrape-text", async (req, res) => {
             extractedText = words.slice(0, 3000).join(" "); // Take the first 3000 words
         }
 
-        // Store the extracted text in a temporary variable (optional)
+        // Store the extracted text in a temporary variable
         global.extractedText = extractedText;
 
         res.json({ message: "Text scraping successful", extractedText });
@@ -139,8 +94,6 @@ app.post("/scrape-text", async (req, res) => {
         res.status(500).json({ error: "Failed to scrape text from the URL" });
     }
 });
-
-
 
 // GET endpoint to retrieve the last scraped text
 app.get("/get-text", (req, res) => {
@@ -151,7 +104,7 @@ app.get("/get-text", (req, res) => {
 });
 
 // Start the server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
